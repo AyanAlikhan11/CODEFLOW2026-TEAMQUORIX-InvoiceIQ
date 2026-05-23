@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+__pycache__
+.venv
+.vscode
+=======
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -52,3 +57,4 @@ prompt
 server.log
 # Skills directory
 /skills/
+>>>>>>> 1764af699eeacc7258402567ebf98acb0b0091c3
