@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+protobuf
+pillow
+sentencepiece
+transformers
+torch
+torchvision
+easyocr
