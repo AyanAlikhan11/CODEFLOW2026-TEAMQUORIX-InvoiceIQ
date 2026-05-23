@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useAppStore } from '@/store/app-store'
 import { Sidebar } from '@/components/layout/sidebar'
-import { Header } from '@/components/layout/header'
+import { Header } from "@/components/layout/header"
 import { DashboardView } from '@/components/dashboard/dashboard-view'
 import { UploadView } from '@/components/upload/upload-view'
 import { HistoryView } from '@/components/history/history-view'
