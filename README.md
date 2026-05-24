@@ -43,7 +43,7 @@ Unlike traditional OCR-based systems, InvoiceIQ acts as a complete **AI Financia
 
 ## 🔗 Demo Link
 
-https://codeflow-2026-teamquorix-invoice-iq.vercel.app/
+https://codeflow-2026-teamquorix-invoice-iq-six.vercel.app/
 
 ---
 
