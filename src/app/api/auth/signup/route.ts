@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { adminAuth } from "@/lib/firebase-admin"
-import { db } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,38 +14,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create Firebase user
+    // Create Firebase Auth user
     const firebaseUser = await adminAuth.createUser({
       email,
       password,
       displayName: name,
     })
 
-    // Optional Prisma user profile
-    const user = await db.user.create({
-      data: {
-        id: firebaseUser.uid,
-        name,
-        email,
-        company: company || "",
-        avatar: "",
-        role: "user",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
+    // OPTIONAL: store extra data inside custom claims
+    await adminAuth.setCustomUserClaims(firebaseUser.uid, {
+      company: company || "",
+      role: "user",
     })
 
     return NextResponse.json({
       success: true,
-      user,
+      user: {
+        id: firebaseUser.uid,
+        email: firebaseUser.email,
+        name: firebaseUser.displayName,
+        company: company || "",
+        role: "user",
+      },
     })
   } catch (error: unknown) {
     console.error("[Signup Error]", error)
 
     const message =
-      error instanceof Error
-        ? error.message
-        : "Signup failed"
+      error instanceof Error ? error.message : "Signup failed"
 
     return NextResponse.json(
       { error: message },
