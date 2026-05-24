@@ -1,6 +1,6 @@
 # InvoiceIQ — AI-Powered Invoice Intelligence Platform
 
-InvoiceIQ is a production-grade AI fintech platform for intelligent invoice processing, real-time fraud detection, GST analytics, spending predictions, and automated financial insights. Built with **Next.js 16**, **Firebase Auth & Firestore**, and powered by AI chat.
+InvoiceIQ is a production-grade AI fintech platform for intelligent invoice processing, real-time fraud detection, GST analytics, spending predictions, and automated financial insights. Built with **Next.js 16**, **Firebase Auth & Firestore**, and powered by **Google Gemini AI**.
 
 ## Features
 
@@ -53,8 +53,8 @@ InvoiceIQ is a production-grade AI fintech platform for intelligent invoice proc
 | **Authentication** | Firebase Authentication |
 | **Database** | Cloud Firestore (user-scoped collections) |
 | **File Storage** | Firebase Cloud Storage |
+| **AI Engine** | Google Gemini 2.5 Flash |
 | **State Management** | Zustand |
-| **AI Chat** | z-ai-web-dev-sdk (LLM completions) |
 | **Icons** | Lucide React |
 | **Charts** | Recharts |
 
@@ -73,39 +73,48 @@ InvoiceIQ is a production-grade AI fintech platform for intelligent invoice proc
 
 ## Firebase Setup Guide
 
-### Step 1: Create a Firebase Project
+### Step 1: Get a Google Gemini API Key (Required)
+
+1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click **"Create API Key"**
+4. Copy the key — you'll need this for the `GEMINI_API_KEY` variable
+
+> **Note**: The free tier of Gemini 2.5 Flash gives you 15 RPM (requests per minute), which is more than enough for development and demos.
+
+### Step 2: Create a Firebase Project
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Click **"Add project"** and follow the setup wizard
 3. Enable **Google Analytics** (optional but recommended)
 
-### Step 2: Enable Authentication
+### Step 3: Enable Authentication
 
 1. In Firebase Console, go to **Authentication → Get started**
 2. Click **"Email/Password"** → Enable it
 3. Click **"Google"** → Enable it and add a support email
 4. (Optional) Configure email templates under **Authentication → Templates**
 
-### Step 3: Create a Web App
+### Step 4: Create a Web App
 
 1. Go to **Project Settings** (gear icon) → **General**
 2. Under "Your apps", click the **Web icon** (`</>`)
 3. Register your app (e.g., "invoiceiq-web")
 4. Copy the **firebaseConfig** object — you'll need these values
 
-### Step 4: Set Up Firestore
+### Step 5: Set Up Firestore
 
 1. Go to **Firestore Database** → **Create database**
 2. Choose **Start in test mode** (you can update rules later)
 3. Select a location closest to your users
 
-### Step 5: Set Up Storage
+### Step 6: Set Up Storage
 
 1. Go to **Storage** → **Get started**
 2. Choose **Start in test mode**
 3. Select a location
 
-### Step 6: Generate Service Account Key
+### Step 7: Generate Service Account Key
 
 1. Go to **Project Settings** → **Service Accounts**
 2. Click **"Generate new private key"**
@@ -154,7 +163,10 @@ cp .env.example .env.local
 Edit `.env.local` and fill in your Firebase credentials:
 
 ```env
-# Client SDK (from Step 3)
+# Google Gemini AI (REQUIRED — get from https://aistudio.google.com/app/apikey)
+GEMINI_API_KEY=AIzaSy...
+
+# Firebase Client SDK (from Step 4)
 NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
@@ -162,7 +174,7 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
 NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
 
-# Admin SDK (from Step 6 — service account JSON)
+# Firebase Admin SDK (from Step 7 — service account JSON)
 FIREBASE_CLIENT_EMAIL=your-service-account@your-project-id.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQ...\n-----END PRIVATE KEY-----\n"
 ```
@@ -293,6 +305,7 @@ users/
 
 | Variable | Required | Description |
 |----------|----------|-------------|
+| `GEMINI_API_KEY` | **Yes** | Google Gemini API key (get from [AI Studio](https://aistudio.google.com/app/apikey)) |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | Yes | Firebase Web API key |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Yes | Firebase Auth domain |
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Yes | Firebase project ID |
@@ -305,6 +318,12 @@ users/
 ---
 
 ## Common Issues & Troubleshooting
+
+### "GEMINI_API_KEY is not set"
+Make sure you've set `GEMINI_API_KEY` in `.env.local` and restarted the server. Get a free API key at https://aistudio.google.com/app/apikey.
+
+### "Gemini API quota exceeded"
+The free tier allows 15 requests per minute. If you're uploading many invoices at once, reduce the batch size or wait a minute between batches.
 
 ### "Firebase not configured" warning
 Make sure all required environment variables are set in `.env.local` and the server has been restarted.

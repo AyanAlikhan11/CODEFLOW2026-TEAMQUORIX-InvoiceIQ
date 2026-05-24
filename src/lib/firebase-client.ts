@@ -15,8 +15,11 @@ const firebaseConfig = {
 
 const isClientConfigured = !!(firebaseConfig.apiKey && firebaseConfig.projectId)
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
-const auth: Auth = getAuth(app)
-const googleProvider: GoogleAuthProviderType = new GoogleAuthProvider().addScope('email').addScope('profile')
+const app = isClientConfigured
+  ? (getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0])
+  : null
+
+const auth: Auth | null = app ? getAuth(app) : null
+const googleProvider: GoogleAuthProviderType | null = app ? new GoogleAuthProvider().addScope('email').addScope('profile') : null
 
 export { app, auth, googleProvider, isClientConfigured }

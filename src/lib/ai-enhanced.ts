@@ -1,5 +1,5 @@
-// Enhanced AI service with better performance for large data
-import ZAI from 'z-ai-web-dev-sdk'
+// Enhanced AI service powered by Google Gemini
+import { getTextModel, getVisionModel } from '@/lib/gemini'
 import type { Invoice } from '@/types'
 
 // ─── Interfaces ─────────────────────────────────────────────────────────────
@@ -72,12 +72,7 @@ const CATEGORIES = [
   'Rent', 'Insurance', 'Transport', 'Groceries', 'Dining',
 ]
 
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  '$': 'USD', '€': 'EUR', '£': 'GBP', '₹': 'INR', '¥': 'JPY',
-  '₩': 'KRW', '₽': 'RUB', '₺': 'TRY', 'A$': 'AUD', 'C$': 'CAD',
-}
-
-// ─── Invoice Analysis ──────────────────────────────────────────────────────
+// ─── Invoice Analysis (Gemini Vision) ───────────────────────────────────────
 
 const AI_INVOICE_PROMPT = `You are a world-class financial document analyzer with expertise in invoices from all countries. Analyze this document with extreme precision.
 
@@ -123,39 +118,42 @@ Return this exact JSON structure:
 }`
 
 export async function analyzeInvoiceWithAI(imageData: string, fileName: string): Promise<InvoiceData> {
-  const zai = await ZAI.create()
-
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
+      const model = getVisionModel('gemini-2.5-flash')
       const isPdf = fileName?.toLowerCase().endsWith('.pdf') || imageData.startsWith('data:application/pdf')
 
-      const contentParts: Array<Record<string, unknown>> = [
-        { type: 'text', text: AI_INVOICE_PROMPT },
+      // Build prompt parts for Gemini
+      const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
+        { text: AI_INVOICE_PROMPT },
       ]
 
       if (isPdf) {
-        contentParts.push({ type: 'file_url', file_url: { url: imageData } })
+        // Extract base64 data from data URI
+        const base64Data = imageData.replace(/^data:application\/pdf;base64,/, '')
+        parts.push({ inlineData: { mimeType: 'application/pdf', data: base64Data } })
       } else {
-        contentParts.push({ type: 'image_url', image_url: { url: imageData } })
+        // Extract base64 data from data URI (supports png, jpg, webp, etc.)
+        const match = imageData.match(/^data:(image\/\w+);base64,/)
+        const mimeType = match ? match[1] : 'image/png'
+        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '')
+        parts.push({ inlineData: { mimeType, data: base64Data } })
       }
 
-      const completion = await zai.chat.completions.createVision({
-        messages: [{ role: 'user', content: contentParts }],
-        thinking: { type: 'disabled' },
-      })
+      const result: GenerateContentResult = await model.generateContent(parts)
+      const responseText = result.response.text()
 
-      const responseText = completion.choices[0]?.message?.content || ''
       return parseInvoiceResponse(responseText)
     } catch (error) {
       lastError = error as Error
-      console.warn(`[AI] Attempt ${attempt}/3 failed:`, (error as Error).message)
+      console.warn(`[Gemini] Invoice analysis attempt ${attempt}/3 failed:`, (error as Error).message)
       if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt))
     }
   }
 
-  throw lastError || new Error('AI analysis failed after 3 attempts')
+  throw lastError || new Error('Invoice analysis failed after 3 attempts')
 }
 
 function parseInvoiceResponse(text: string): InvoiceData {
@@ -326,7 +324,7 @@ export async function analyzeInvoicesBatch(
   return results
 }
 
-// ─── Fraud Detection ────────────────────────────────────────────────────────
+// ─── Fraud Detection (Algorithmic — no AI) ─────────────────────────────────
 
 export function detectFraud(
   invoice: InvoiceData | Invoice,
@@ -340,7 +338,7 @@ export function detectFraud(
   const invoiceMerchant = invoice.merchant.toLowerCase().trim()
   const invoiceDate = invoice.date || ''
 
-  // Strategy 1: Duplicate detection (same merchant + amount within 10% + date within 7 days)
+  // Strategy 1: Duplicate detection
   for (const existing of existingInvoices) {
     if ('id' in existing && existing.id === (invoice as Invoice).id) continue
     const existingMerchant = existing.merchant.toLowerCase().trim()
@@ -349,7 +347,6 @@ export function detectFraud(
     if (existingMerchant === invoiceMerchant && invoiceAmount > 0) {
       const amountDiff = Math.abs(existing.amount - invoiceAmount) / invoiceAmount
       if (amountDiff <= 0.1) {
-        // Check date proximity (within 7 days)
         if (invoiceDate && existingDate) {
           const invDate = new Date(invoiceDate)
           const exDate = new Date(existingDate)
@@ -364,7 +361,6 @@ export function detectFraud(
             })
           }
         } else {
-          // No dates to compare, but amount and merchant match
           compositeScore += 0.2
           reasons.push(`Potential duplicate: same merchant "${invoice.merchant}" with similar amount (no dates to compare)`)
         }
@@ -382,10 +378,10 @@ export function detectFraud(
         const zScore = Math.abs((invoiceAmount - mean) / stdDev)
         if (zScore > 3) {
           compositeScore += 0.3
-          reasons.push(`Amount anomaly: ₹${invoiceAmount.toFixed(2)} is ${(zScore).toFixed(1)} standard deviations from the mean (₹${mean.toFixed(2)})`)
+          reasons.push(`Amount anomaly: ₹${invoiceAmount.toFixed(2)} is ${zScore.toFixed(1)} standard deviations from the mean (₹${mean.toFixed(2)})`)
           alerts.push({
             type: 'amount_anomaly',
-            description: `Unusual amount ₹${invoiceAmount.toFixed(2)} — ${(zScore).toFixed(1)}σ from average ₹${mean.toFixed(2)}`,
+            description: `Unusual amount ₹${invoiceAmount.toFixed(2)} — ${zScore.toFixed(1)}σ from average ₹${mean.toFixed(2)}`,
             severity: zScore > 5 ? 'critical' : 'high',
           })
         }
@@ -419,7 +415,7 @@ export function detectFraud(
     })
   }
 
-  // Strategy 5: Unusual timing (midnight or weekend)
+  // Strategy 5: Unusual timing
   if (invoiceDate) {
     const invDateObj = new Date(invoiceDate)
     const dayOfWeek = invDateObj.getDay()
@@ -436,7 +432,7 @@ export function detectFraud(
   }
 }
 
-// ─── Insights Generation ────────────────────────────────────────────────────
+// ─── Insights Generation (Gemini Text) ─────────────────────────────────────
 
 function generateDataSummary(invoices: InvoiceData[]): string {
   const totalSpent = invoices.reduce((s, i) => s + i.amount, 0)
@@ -476,8 +472,6 @@ export async function generateInsights(invoices: InvoiceData[]): Promise<Insight
   const totalSpent = invoices.reduce((s, i) => s + i.amount, 0)
   const avgInvoice = totalSpent / invoices.length
 
-  const zai = await ZAI.create()
-
   const prompt = `Analyze this financial data from ${invoices.length} invoices totaling ₹${totalSpent.toFixed(2)}:
 
 ${generateDataSummary(invoices)}
@@ -494,15 +488,13 @@ Rules:
   let lastError: Error | null = null
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const completion = await zai.chat.completions.create({
-        messages: [{ role: 'user', content: prompt }],
-      })
-
-      const responseText = completion.choices[0]?.message?.content || ''
+      const model = getTextModel('gemini-2.5-flash')
+      const result = await model.generateContent(prompt)
+      const responseText = result.response.text()
       return parseInsightsResponse(responseText, invoices)
     } catch (error) {
       lastError = error as Error
-      console.warn(`[AI] Insight generation attempt ${attempt}/2 failed:`, (error as Error).message)
+      console.warn(`[Gemini] Insight generation attempt ${attempt}/2 failed:`, (error as Error).message)
       if (attempt < 2) await new Promise(r => setTimeout(r, 1000))
     }
   }
@@ -594,7 +586,7 @@ function generateBasicInsights(invoices: InvoiceData[], totalSpent: number, avgI
   return insights
 }
 
-// ─── Spending Prediction ────────────────────────────────────────────────────
+// ─── Spending Prediction (Algorithmic — no AI) ──────────────────────────────
 
 export function predictSpending(monthlyData: MonthlyDataPoint[]): PredictionData[] {
   if (monthlyData.length < 2) return []
@@ -625,7 +617,7 @@ export function predictSpending(monthlyData: MonthlyDataPoint[]): PredictionData
     smoothed = alpha * amounts[i] + (1 - alpha) * smoothed
   }
 
-  // Combine: weighted average (linear 40%, moving avg 30%, smoothed 30%)
+  // Combine: weighted average
   const predictions: PredictionData[] = []
   const lastMonth = months[months.length - 1]
   const lastDate = new Date(lastMonth + '-01')
@@ -638,7 +630,6 @@ export function predictSpending(monthlyData: MonthlyDataPoint[]): PredictionData
     const linearPred = slope * (n - 1 + i) + intercept
     const combined = linearPred * 0.4 + movingAvg * 0.3 + smoothed * 0.3
 
-    // Confidence intervals based on data variance
     const residuals = amounts.map((y, idx) => y - (slope * idx + intercept))
     const stdError = Math.sqrt(residuals.reduce((s, r) => s + r * r, 0) / Math.max(n - 2, 1))
     const margin = stdError * (1 + (1 / n) + Math.pow(i, 2) / n) * 0.5
@@ -656,7 +647,7 @@ export function predictSpending(monthlyData: MonthlyDataPoint[]): PredictionData
   return predictions
 }
 
-// ─── Financial Health Score ─────────────────────────────────────────────────
+// ─── Financial Health Score (Algorithmic — no AI) ──────────────────────────
 
 export function calculateHealthScore(invoices: InvoiceData[]): HealthScoreData {
   if (invoices.length === 0) {
@@ -665,13 +656,9 @@ export function calculateHealthScore(invoices: InvoiceData[]): HealthScoreData {
 
   const totalSpent = invoices.reduce((s, i) => s + i.amount, 0)
 
-  // 1. Spending trend (decreasing = good)
+  // 1. Spending trend
   let spending = 70
-  const sortedByDate = [...invoices].sort((a, b) => {
-    const da = a.date || ''
-    const db2 = b.date || ''
-    return da.localeCompare(db2)
-  })
+  const sortedByDate = [...invoices].sort((a, b) => (a.date || '').localeCompare(b.date || ''))
   if (sortedByDate.length >= 4) {
     const third = Math.floor(sortedByDate.length / 3)
     const recent = sortedByDate.slice(0, third).reduce((s, i) => s + i.amount, 0) / third
@@ -687,17 +674,16 @@ export function calculateHealthScore(invoices: InvoiceData[]): HealthScoreData {
   }
   spending = Math.min(100, Math.max(0, spending))
 
-  // 2. Tax efficiency (are they claiming all GST?)
-  const totalTax = invoices.reduce((s, i) => s + i.tax, 0)
+  // 2. Tax efficiency
   const totalGST = invoices.reduce((s, i) => s + i.gstAmount, 0)
   const taxEfficiency = totalSpent > 0
     ? Math.min(100, Math.round((totalGST / totalSpent) * 500 + 50))
     : 70
 
-  // 3. Savings (budget adherence — use a default 70 since budgets are separate)
+  // 3. Savings
   const savings = 70
 
-  // 4. Consistency (regular patterns = good)
+  // 4. Consistency
   const monthlyMap: Record<string, number> = {}
   invoices.forEach(inv => {
     const month = inv.date ? inv.date.substring(0, 7) : 'unknown'
@@ -715,7 +701,7 @@ export function calculateHealthScore(invoices: InvoiceData[]): HealthScoreData {
   }
   consistency = Math.min(100, Math.max(0, consistency))
 
-  // 5. Diversification (Shannon entropy of categories)
+  // 5. Diversification (Shannon entropy)
   const categoryTotals: Record<string, number> = {}
   invoices.forEach(inv => {
     categoryTotals[inv.category] = (categoryTotals[inv.category] || 0) + inv.amount
@@ -731,8 +717,7 @@ export function calculateHealthScore(invoices: InvoiceData[]): HealthScoreData {
   }
   diversification = Math.min(100, Math.max(0, diversification))
 
-  // 6. Fraud safety (based on fraud scores)
-  // Use detectFraud results average
+  // 6. Fraud safety
   let avgFraudScore = 0
   for (const inv of invoices) {
     const result = detectFraud(inv, invoices.filter(i => i !== inv))
@@ -762,7 +747,7 @@ export function calculateHealthScore(invoices: InvoiceData[]): HealthScoreData {
   }
 }
 
-// ─── Helpers: Convert Invoice to InvoiceData ────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 export function invoiceToInvoiceData(invoice: Invoice): InvoiceData {
   return {
