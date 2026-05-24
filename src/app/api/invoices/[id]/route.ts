@@ -1,18 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { database } from '@/lib/database'
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
-    await db.invoice.delete({
-      where: { id },
-    })
+
+    if (!id) {
+      return NextResponse.json({ error: 'Invoice ID is required' }, { status: 400 })
+    }
+
+    await database.deleteInvoice(id)
+
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting invoice:', error)
-    return NextResponse.json({ error: 'Failed to delete invoice' }, { status: 500 })
+    console.error('Delete error:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete invoice' },
+      { status: 500 }
+    )
   }
 }

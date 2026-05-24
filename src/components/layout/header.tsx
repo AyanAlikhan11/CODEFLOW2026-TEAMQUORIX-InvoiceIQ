@@ -2,10 +2,19 @@
 
 import { useState } from 'react'
 import { useAppStore } from '@/store/app-store'
+<<<<<<< HEAD
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, Search, MessageCircle, X, Receipt } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+=======
+import { useAuth } from '@/lib/auth-context'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Bell, Search, MessageCircle, X, Receipt, LogOut, User } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+>>>>>>> b94359f (landing page created,signup signin created, firebase for authentication)
 
 const viewInfo: Record<string, { title: string; description: string }> = {
   dashboard: {
@@ -43,6 +52,7 @@ const viewInfo: Record<string, { title: string; description: string }> = {
 }
 
 export function Header() {
+<<<<<<< HEAD
   const {
     currentView,
     invoices,
@@ -50,7 +60,12 @@ export function Header() {
     setCurrentView,
     setIsChatOpen,
   } = useAppStore()
+=======
+  const { currentView, invoices, fraudAlerts, setCurrentView, setIsChatOpen } = useAppStore()
+  const { user, logout } = useAuth()
+>>>>>>> b94359f (landing page created,signup signin created, firebase for authentication)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
 
   const totalSpent = invoices.reduce((sum, inv) => sum + inv.amount, 0)
 
@@ -163,7 +178,11 @@ export function Header() {
                               </p>
                             </div>
                             <span className="text-sm font-semibold shrink-0">
+<<<<<<< HEAD
                               ${inv.amount.toFixed(2)}
+=======
+                              ₹${inv.amount.toFixed(2)}
+>>>>>>> b94359f (landing page created,signup signin created, firebase for authentication)
                             </span>
                           </motion.div>
                         ))
@@ -174,7 +193,11 @@ export function Header() {
                         <p className="text-xs text-muted-foreground text-center">
                           {invoices.length} invoice
                           {invoices.length !== 1 ? 's' : ''} processed
+<<<<<<< HEAD
                           &middot; Total: ${totalSpent.toFixed(2)}
+=======
+                          &middot; Total: ₹${totalSpent.toFixed(2)}
+>>>>>>> b94359f (landing page created,signup signin created, firebase for authentication)
                         </p>
                       </div>
                     )}
@@ -195,6 +218,56 @@ export function Header() {
             >
               <MessageCircle className="h-5 w-5 text-muted-foreground" />
             </motion.button>
+<<<<<<< HEAD
+=======
+
+            {/* User Profile Dropdown */}
+            <div className="relative">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowProfile(!showProfile)}
+                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-accent/10 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white text-xs font-bold">
+                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+              </motion.button>
+
+              <AnimatePresence>
+                {showProfile && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-12 w-64 bg-popover border border-border rounded-xl shadow-lg z-50 overflow-hidden"
+                  >
+                    <div className="px-4 py-3 border-b border-border">
+                      <p className="text-sm font-semibold">{user?.name || 'User'}</p>
+                      <p className="text-xs text-muted-foreground">{user?.email || ''}</p>
+                      {user?.company && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{user.company}</p>
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start text-sm text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                        onClick={() => {
+                          setShowProfile(false)
+                          logout()
+                        }}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+>>>>>>> b94359f (landing page created,signup signin created, firebase for authentication)
           </div>
         </div>
       </motion.header>

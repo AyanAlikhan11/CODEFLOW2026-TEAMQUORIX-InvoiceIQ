@@ -1,0 +1,148 @@
+# =============================================================================
+# InvoiceIQ AI Service — Docker Compose Configuration
+# =============================================================================
+# Usage:   docker compose up -d
+# Logs:    docker compose logs -f ai-service
+# Stop:    docker compose down
+# =============================================================================
+
+version: "3.9"
+
+services:
+  # ---------------------------------------------------------------------------
+  # AI Service (FastAPI application)
+  # ---------------------------------------------------------------------------
+  ai-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: invoiceiq-ai-service
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - FAISS_INDEX_DIR=/data/faiss_index
+      - DATABASE_URL=postgresql://invoiceiq:invoiceiq@postgres:5432/invoiceiq
+      - LOG_LEVEL=info
+    volumes:
+      - faiss-data:/data/faiss_index
+      - uploads-data:/data/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "2.0"
+        reservations:
+          memory: 2G
+          cpus: "1.0"
+    networks:
+      - invoiceiq-network
+
+  # ---------------------------------------------------------------------------
+  # Redis — caching + task queue
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: invoiceiq-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server
+        --maxmemory 512mb
+        --maxmemory-policy allkeys-lru
+        --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - invoiceiq-network
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — main database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: invoiceiq-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: invoiceiq
+      POSTGRES_PASSWORD: invoiceiq
+      POSTGRES_DB: invoiceiq
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U invoiceiq -d invoiceiq"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - invoiceiq-network
+
+  # ---------------------------------------------------------------------------
+  # Celery Worker — background task processing (optional)
+  # ---------------------------------------------------------------------------
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: invoiceiq-celery-worker
+    command: celery -A services.redis_service worker --loglevel=info --concurrency=2
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - FAISS_INDEX_DIR=/data/faiss_index
+      - DATABASE_URL=postgresql://invoiceiq:invoiceiq@postgres:5432/invoiceiq
+    volumes:
+      - faiss-data:/data/faiss_index
+      - uploads-data:/data/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+    networks:
+      - invoiceiq-network
+
+# =============================================================================
+# Named volumes for data persistence
+# =============================================================================
+volumes:
+  faiss-data:
+    driver: local
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+  uploads-data:
+    driver: local
+
+# =============================================================================
+# Network
+# =============================================================================
+networks:
+  invoiceiq-network:
+    driver: bridge

@@ -1,32 +1,44 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore, type ViewType } from '@/store/app-store'
 import {
   LayoutDashboard,
   Upload,
-  History,
-  Lightbulb,
+  FileText,
+  BarChart3,
+  TrendingUp,
+  Bot,
+  Wallet,
   ChevronLeft,
   ChevronRight,
   Receipt,
   Sparkles,
   Sun,
-  Moon
+  Moon,
 } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from '@/components/ui/tooltip'
 import { useTheme } from 'next-themes'
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
-import { useEffect, useState } from 'react'
 
-const navItems: { id: ViewType; label: string; icon: React.ReactNode }[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
-  { id: 'upload', label: 'Upload & Analyze', icon: <Upload className="h-5 w-5" /> },
-  { id: 'history', label: 'Invoice History', icon: <History className="h-5 w-5" /> },
-  { id: 'insights', label: 'AI Insights', icon: <Lightbulb className="h-5 w-5" /> },
+const navItems: { id: ViewType; label: string; icon: React.ElementType }[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'upload', label: 'Upload & Scan', icon: Upload },
+  { id: 'invoices', label: 'Invoices', icon: FileText },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+  { id: 'predictions', label: 'Predictions', icon: TrendingUp },
+  { id: 'chat', label: 'AI Assistant', icon: Bot },
+  { id: 'budget', label: 'Budget', icon: Wallet },
 ]
 
 export function Sidebar() {
-  const { currentView, setCurrentView, sidebarOpen, setSidebarOpen } = useAppStore()
+  const { currentView, setCurrentView, sidebarCollapsed, setSidebarCollapsed } =
+    useAppStore()
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
@@ -39,27 +51,26 @@ export function Sidebar() {
     <TooltipProvider delayDuration={0}>
       <motion.aside
         initial={false}
-        animate={{ width: sidebarOpen ? 260 : 72 }}
+        animate={{ width: sidebarCollapsed ? 72 : 260 }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className="fixed left-0 top-0 h-screen z-40 flex flex-col border-r border-border bg-sidebar"
+        className="fixed left-0 top-0 h-screen z-40 flex flex-col glass-sidebar"
       >
         {/* Logo */}
-        <motion.div 
-          className="flex items-center gap-3 px-4 h-16 border-b border-border cursor-pointer"
+        <motion.div
+          className="flex items-center gap-3 px-4 h-16 border-b border-border/50 cursor-pointer shrink-0"
           onClick={() => setCurrentView('dashboard')}
           whileHover={{ opacity: 0.8 }}
           whileTap={{ opacity: 0.6 }}
-          title="Go to Dashboard"
         >
-          <motion.div 
-            className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary text-primary-foreground shrink-0"
+          <motion.div
+            className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 text-white shrink-0"
             whileHover={{ rotate: 10, scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <Receipt className="h-5 w-5" />
           </motion.div>
           <AnimatePresence>
-            {sidebarOpen && (
+            {!sidebarCollapsed && (
               <motion.div
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: 'auto' }}
@@ -67,18 +78,22 @@ export function Sidebar() {
                 className="overflow-hidden whitespace-nowrap"
               >
                 <h1 className="text-lg font-bold tracking-tight">
-                  <span className="gradient-text">InvoiceAI</span>
+                  <span className="gradient-text">InvoiceIQ</span>
                 </h1>
-                <p className="text-[10px] text-muted-foreground -mt-1">Smart Analyzer</p>
+                <p className="text-[10px] text-muted-foreground -mt-1">
+                  AI-Powered
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = currentView === item.id
+            const Icon = item.icon
+
             return (
               <Tooltip key={item.id}>
                 <TooltipTrigger asChild>
@@ -87,21 +102,24 @@ export function Sidebar() {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setCurrentView(item.id)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative
-                      ${isActive 
-                        ? 'bg-primary/10 text-primary' 
-                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                      ${
+                        isActive
+                          ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent/10'
                       }`}
                   >
                     {isActive && (
                       <motion.div
                         layoutId="activeNav"
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-purple-500 rounded-r-full"
                         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                       />
                     )}
-                    <span className={`shrink-0 ${isActive ? 'text-primary' : ''}`}>{item.icon}</span>
+                    <Icon
+                      className={`h-5 w-5 shrink-0 ${isActive ? 'text-purple-600 dark:text-purple-400' : ''}`}
+                    />
                     <AnimatePresence>
-                      {sidebarOpen && (
+                      {!sidebarCollapsed && (
                         <motion.span
                           initial={{ opacity: 0, width: 0 }}
                           animate={{ opacity: 1, width: 'auto' }}
@@ -112,12 +130,12 @@ export function Sidebar() {
                         </motion.span>
                       )}
                     </AnimatePresence>
-                    {isActive && sidebarOpen && (
-                      <Sparkles className="h-3.5 w-3.5 ml-auto text-primary" />
+                    {isActive && !sidebarCollapsed && (
+                      <Sparkles className="h-3.5 w-3.5 ml-auto text-purple-600 dark:text-purple-400" />
                     )}
                   </motion.button>
                 </TooltipTrigger>
-                {!sidebarOpen && (
+                {sidebarCollapsed && (
                   <TooltipContent side="right" className="font-medium">
                     {item.label}
                   </TooltipContent>
@@ -128,17 +146,21 @@ export function Sidebar() {
         </nav>
 
         {/* Bottom Actions */}
-        <div className="px-3 pb-4 space-y-2 border-t border-border pt-4">
+        <div className="px-3 pb-4 space-y-2 border-t border-border/50 pt-4">
           {mounted && (
             <motion.button
               whileHover={{ x: 4 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors"
             >
-              {theme === 'dark' ? <Sun className="h-5 w-5 shrink-0" /> : <Moon className="h-5 w-5 shrink-0" />}
+              {theme === 'dark' ? (
+                <Sun className="h-5 w-5 shrink-0" />
+              ) : (
+                <Moon className="h-5 w-5 shrink-0" />
+              )}
               <AnimatePresence>
-                {sidebarOpen && (
+                {!sidebarCollapsed && (
                   <motion.span
                     initial={{ opacity: 0, width: 0 }}
                     animate={{ opacity: 1, width: 'auto' }}
@@ -154,12 +176,16 @@ export function Sidebar() {
           <motion.button
             whileHover={{ x: 4 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors"
           >
-            {sidebarOpen ? <ChevronLeft className="h-5 w-5 shrink-0" /> : <ChevronRight className="h-5 w-5 shrink-0" />}
+            {sidebarCollapsed ? (
+              <ChevronRight className="h-5 w-5 shrink-0" />
+            ) : (
+              <ChevronLeft className="h-5 w-5 shrink-0" />
+            )}
             <AnimatePresence>
-              {sidebarOpen && (
+              {!sidebarCollapsed && (
                 <motion.span
                   initial={{ opacity: 0, width: 0 }}
                   animate={{ opacity: 1, width: 'auto' }}

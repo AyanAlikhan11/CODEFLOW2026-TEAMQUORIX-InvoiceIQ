@@ -90,7 +90,7 @@ export function HistoryView() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>{filtered.length} invoice{filtered.length !== 1 ? 's' : ''}</span>
           <span>|</span>
-          <span className="font-semibold text-foreground">${totalFiltered.toFixed(2)} total</span>
+          <span className="font-semibold text-foreground">₹{totalFiltered.toFixed(2)} total</span>
         </div>
         <Button variant="outline" size="sm" className="gap-2">
           <Download className="h-4 w-4" />
@@ -170,8 +170,8 @@ export function HistoryView() {
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="font-bold text-lg">${inv.amount.toFixed(2)}</p>
-                        {inv.tax > 0 && <p className="text-xs text-muted-foreground">Tax: ${inv.tax.toFixed(2)}</p>}
+                        <p className="font-bold text-lg">₹{inv.amount.toFixed(2)}</p>
+                        {inv.tax > 0 && <p className="text-xs text-muted-foreground">Tax: ₹{inv.tax.toFixed(2)}</p>}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <motion.button
@@ -207,11 +207,11 @@ export function HistoryView() {
                               </div>
                               <div>
                                 <p className="text-xs text-muted-foreground">Amount</p>
-                                <p className="text-sm font-medium">{inv.currency} ${inv.amount.toFixed(2)}</p>
+                                <p className="text-sm font-medium">{inv.currency} ₹{inv.amount.toFixed(2)}</p>
                               </div>
                               <div>
                                 <p className="text-xs text-muted-foreground">Tax</p>
-                                <p className="text-sm font-medium">${inv.tax.toFixed(2)}</p>
+                                <p className="text-sm font-medium">₹{inv.tax.toFixed(2)}</p>
                               </div>
                               <div>
                                 <p className="text-xs text-muted-foreground">Category</p>
@@ -225,7 +225,7 @@ export function HistoryView() {
                                   {inv.items.map((lineItem, i) => (
                                     <div key={i} className="flex items-center justify-between text-sm p-2 rounded-lg bg-secondary/50">
                                       <span>{lineItem.name} x{lineItem.quantity}</span>
-                                      <span className="font-medium">${(lineItem.price * lineItem.quantity).toFixed(2)}</span>
+                                      <span className="font-medium">₹{(lineItem.price * lineItem.quantity).toFixed(2)}</span>
                                     </div>
                                   ))}
                                 </div>

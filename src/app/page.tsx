@@ -1,71 +1,33 @@
 'use client'
 
+import { useAuth } from '@/lib/auth-context'
+import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { useAppStore } from '@/store/app-store'
-import { Sidebar } from '@/components/layout/sidebar'
-import { Header } from "@/components/layout/header"
-import { DashboardView } from '@/components/dashboard/dashboard-view'
-import { UploadView } from '@/components/upload/upload-view'
-import { HistoryView } from '@/components/history/history-view'
-import { InsightsView } from '@/components/insights/insights-view'
-import { motion, AnimatePresence } from 'framer-motion'
+import { LandingNavbar } from '@/components/landing/navbar'
+import { HeroSection } from '@/components/landing/hero'
+import { FeaturesSection } from '@/components/landing/features'
+import { HowItWorksSection } from '@/components/landing/how-it-works'
+import { TrustedBySection } from '@/components/landing/trusted-by'
+import { LandingFooter } from '@/components/landing/footer'
 
-const views = {
-  dashboard: DashboardView,
-  upload: UploadView,
-  history: HistoryView,
-  insights: InsightsView,
-}
-
-export default function HomePage() {
-  const { currentView, sidebarOpen, setInvoices } = useAppStore()
+export default function LandingPage() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
 
   useEffect(() => {
-    // Load invoices from database on mount
-    async function loadInvoices() {
-      try {
-        const res = await fetch('/api/invoices')
-        if (res.ok) {
-          const data = await res.json()
-          setInvoices(
-            data.invoices.map((inv: Record<string, unknown>) => ({
-              ...inv,
-              items: typeof inv.items === 'string' ? JSON.parse(inv.items) : inv.items,
-            }))
-          )
-        }
-      } catch (err) {
-        console.error('Failed to load invoices:', err)
-      }
+    if (!loading && user) {
+      router.push('/dashboard')
     }
-    loadInvoices()
-  }, [setInvoices])
-
-  const CurrentViewComponent = views[currentView]
+  }, [user, loading, router])
 
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar />
-      <motion.div
-        animate={{ marginLeft: sidebarOpen ? 260 : 72 }}
-        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className="min-h-screen flex flex-col"
-      >
-        <Header />
-        <main className="flex-1 p-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentView}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-            >
-              <CurrentViewComponent />
-            </motion.div>
-          </AnimatePresence>
-        </main>
-      </motion.div>
+    <div className="min-h-screen bg-white dark:bg-[#0a0e1a]">
+      <LandingNavbar />
+      <HeroSection />
+      <TrustedBySection />
+      <FeaturesSection />
+      <HowItWorksSection />
+      <LandingFooter />
     </div>
   )
 }

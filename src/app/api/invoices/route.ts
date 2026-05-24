@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
+import { database } from '@/lib/database'
+import { analyzeInvoiceWithAI, detectFraud, type InvoiceData } from '@/lib/ai-enhanced'
+
+const CATEGORIES = [
+  'Food', 'Shopping', 'Travel', 'Medical', 'Utilities',
+  'Entertainment', 'Office', 'Education', 'Subscription', 'Other',
+  'Rent', 'Insurance', 'Transport', 'Groceries', 'Dining',
+]
 
 export async function GET() {
   try {
-    const invoices = await db.invoice.findMany({
-      orderBy: { createdAt: 'desc' },
-    })
+    const invoices = await database.getInvoices()
     return NextResponse.json({ invoices })
   } catch (error) {
-    console.error('Error fetching invoices:', error)
-    return NextResponse.json({ error: 'Failed to fetch invoices' }, { status: 500 })
+    console.error('Failed to fetch invoices:', error)
+    return NextResponse.json({ invoices: [] }, { status: 200 })
   }
 }
 
@@ -20,120 +24,107 @@ export async function POST(request: NextRequest) {
     const { fileName, imageData } = body
 
     if (!imageData) {
-      return NextResponse.json({ error: 'No image data provided' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'No image data provided' },
+        { status: 400 }
+      )
     }
 
-    const zai = await ZAI.create()
-
-    const completion = await zai.chat.completions.createVision({
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: imageData,
-              },
-            },
-            {
-              type: 'text',
-              text: `You are an expert invoice and receipt analyzer. Extract all information from this invoice image.
-
-Return ONLY valid JSON with these fields (no markdown, no code blocks, just raw JSON):
-- merchant: The business/store/merchant name (string)
-- amount: Total amount as a number (no currency symbol)
-- date: Invoice date in YYYY-MM-DD format (string or null)
-- tax: Tax amount as a number (0 if not found)
-- currency: Currency code like USD, EUR, GBP, INR (string)
-- items: Array of objects, each with name (string), quantity (number), price (number)
-- category: One of exactly: Food, Shopping, Travel, Medical, Utilities, Entertainment, Office, Education, Subscription, Other
-
-Example JSON:
-{"merchant":"Walmart","amount":45.67,"date":"2025-01-15","tax":3.82,"currency":"USD","items":[{"name":"Milk","quantity":2,"price":3.49},{"name":"Bread","quantity":1,"price":2.99}],"category":"Food"}
-
-If you cannot determine a field, use null for strings and 0 for numbers.`,
-            },
-          ],
-        },
-      ],
-    })
-
-    let extractedData
-    const content = completion.choices?.[0]?.message?.content || ''
+    let invoiceData: InvoiceData
 
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        extractedData = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error('No JSON found')
-      }
-    } catch {
-      extractedData = {
-        merchant: 'Unknown Merchant',
-        amount: 0,
-        date: new Date().toISOString().split('T')[0],
-        tax: 0,
-        currency: 'USD',
-        items: [],
-        category: 'Other',
+      invoiceData = await analyzeInvoiceWithAI(imageData, fileName || 'invoice.pdf')
+    } catch (aiError) {
+      console.error('AI analysis error:', aiError)
+      return NextResponse.json(
+        { error: 'AI analysis failed. Please try a clearer invoice image or a different format.' },
+        { status: 500 }
+      )
+    }
+
+    if (invoiceData.amount <= 0) {
+      return NextResponse.json(
+        { error: 'AI could not detect a valid total amount. Please try a clearer image.' },
+        { status: 422 }
+      )
+    }
+
+    // Normalize category
+    if (!CATEGORIES.includes(invoiceData.category)) {
+      invoiceData.category = 'Other'
+    }
+
+    // Validate date
+    if (invoiceData.date) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+      if (!dateRegex.test(invoiceData.date)) {
+        invoiceData.date = null
       }
     }
 
-    // Validate and sanitize extracted data
-    const sanitizedData = {
-      merchant: String(extractedData.merchant || 'Unknown Merchant').substring(0, 200),
-      amount: Math.max(0, parseFloat(extractedData.amount) || 0),
-      date: extractedData.date || null,
-      tax: Math.max(0, parseFloat(extractedData.tax) || 0),
-      category: validateCategory(extractedData.category),
-      items: validateItems(extractedData.items),
-      currency: validateCurrency(extractedData.currency),
+    // Get existing invoices for fraud detection
+    const existingInvoices = await database.getInvoices()
+    const fraudResult = detectFraud(invoiceData, existingInvoices)
+    const fraudScore = fraudResult.score
+    const isDuplicate = fraudResult.alerts.some(a => a.type === 'duplicate')
+
+    // Create fraud alerts if high severity detected
+    for (const alert of fraudResult.alerts) {
+      if (alert.severity === 'high' || alert.severity === 'critical') {
+        // Create alert after invoice is saved (below)
+      }
     }
 
-    const invoice = await db.invoice.create({
-      data: {
-        fileName: fileName || 'uploaded-invoice',
-        merchant: sanitizedData.merchant,
-        amount: sanitizedData.amount,
-        date: sanitizedData.date,
-        tax: sanitizedData.tax,
-        category: sanitizedData.category,
-        items: JSON.stringify(sanitizedData.items),
-        currency: sanitizedData.currency,
-        status: 'processed',
-      },
+    const now = new Date().toISOString()
+    const itemsWithIds = invoiceData.items.map((item, idx) => ({
+      ...item,
+      total: item.quantity * item.price,
+      id: `item-${Date.now()}-${idx}`,
+    }))
+
+    const invoice = await database.createInvoice({
+      fileName: fileName || 'invoice.pdf',
+      merchant: invoiceData.merchant,
+      amount: invoiceData.amount,
+      date: invoiceData.date,
+      tax: invoiceData.tax,
+      gstAmount: invoiceData.gstAmount,
+      gstRate: invoiceData.gstRate,
+      category: invoiceData.category,
+      subCategory: invoiceData.subCategory || '',
+      items: itemsWithIds,
+      currency: invoiceData.currency,
+      status: isDuplicate ? 'duplicate' : fraudScore > 0.5 ? 'flagged' : 'completed',
+      fraudScore,
+      isDuplicate,
+      confidence: invoiceData.confidence,
+      ocrText: '',
+      uploadedAt: now,
+      processedAt: now,
     })
 
-    return NextResponse.json({ invoice, extractedData: sanitizedData })
-  } catch (error) {
-    console.error('Error analyzing invoice:', error)
-    const message = error instanceof Error ? error.message : 'Failed to analyze invoice'
-    return NextResponse.json({ error: message }, { status: 500 })
-  }
-}
-
-function validateCategory(cat: unknown): string {
-  const valid = ['Food', 'Shopping', 'Travel', 'Medical', 'Utilities', 'Entertainment', 'Office', 'Education', 'Subscription', 'Other']
-  if (typeof cat === 'string' && valid.includes(cat)) return cat
-  return 'Other'
-}
-
-function validateCurrency(cur: unknown): string {
-  if (typeof cur === 'string' && cur.match(/^[A-Z]{3}$/)) return cur
-  return 'USD'
-}
-
-function validateItems(items: unknown): { name: string; quantity: number; price: number }[] {
-  if (!Array.isArray(items)) return []
-  return items.slice(0, 50).map((item: unknown) => {
-    if (typeof item !== 'object' || item === null) return null
-    const obj = item as Record<string, unknown>
-    return {
-      name: String(obj.name || 'Unknown Item').substring(0, 200),
-      quantity: Math.max(1, parseInt(String(obj.quantity)) || 1),
-      price: Math.max(0, parseFloat(String(obj.price)) || 0),
+    // Create fraud alerts for high severity detections
+    if (invoice.id) {
+      for (const alert of fraudResult.alerts) {
+        if (alert.severity === 'high' || alert.severity === 'critical') {
+          await database.createFraudAlert({
+            invoiceId: invoice.id,
+            type: alert.type,
+            description: alert.description,
+            severity: alert.severity,
+          }).catch(() => {
+            // Ignore alert creation errors
+          })
+        }
+      }
     }
-  }).filter(Boolean) as { name: string; quantity: number; price: number }[]
+
+    return NextResponse.json({ invoice })
+  } catch (error) {
+    console.error('Invoice processing error:', error)
+    return NextResponse.json(
+      { error: 'Failed to process invoice. Please try again.' },
+      { status: 500 }
+    )
+  }
 }

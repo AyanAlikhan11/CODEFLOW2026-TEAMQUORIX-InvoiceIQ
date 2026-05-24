@@ -111,7 +111,7 @@ export function InsightsView() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Analyzed', value: invoices.length, icon: <Receipt className="h-5 w-5" />, color: 'text-primary' },
-          { label: 'Total Spent', value: `$${totalSpent.toFixed(2)}`, icon: <TrendingUp className="h-5 w-5" />, color: 'text-emerald-500' },
+          { label: 'Total Spent', value: `₹${totalSpent.toFixed(2)}`, icon: <TrendingUp className="h-5 w-5" />, color: 'text-emerald-500' },
           { label: 'Top Category', value: topCategory?.[0] || 'N/A', icon: <Target className="h-5 w-5" />, color: 'text-amber-500' },
           { label: 'Unique Merchants', value: merchantCount, icon: <Shield className="h-5 w-5" />, color: 'text-violet-500' },
         ].map((stat, i) => (
@@ -164,7 +164,7 @@ export function InsightsView() {
                   <PiggyBank className="h-4 w-4 text-emerald-500" />
                   <span className="text-sm font-medium">Savings Opportunity</span>
                 </div>
-                <p className="text-2xl font-bold text-emerald-500">${(totalSpent * 0.12).toFixed(2)}</p>
+                <p className="text-2xl font-bold text-emerald-500">₹{(totalSpent * 0.12).toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground mt-1">Estimated potential savings</p>
               </div>
               <div className="p-4 rounded-xl bg-background/50 border border-border">
@@ -172,7 +172,7 @@ export function InsightsView() {
                   <Zap className="h-4 w-4 text-amber-500" />
                   <span className="text-sm font-medium">Tax Summary</span>
                 </div>
-                <p className="text-2xl font-bold">${totalTax.toFixed(2)}</p>
+                <p className="text-2xl font-bold">₹{totalTax.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground mt-1">{totalSpent > 0 ? ((totalTax / totalSpent) * 100).toFixed(1) : 0}% effective tax rate</p>
               </div>
               <div className="p-4 rounded-xl bg-background/50 border border-border">
@@ -180,7 +180,7 @@ export function InsightsView() {
                   <ArrowUpRight className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium">Avg. per Invoice</span>
                 </div>
-                <p className="text-2xl font-bold">${invoices.length > 0 ? (totalSpent / invoices.length).toFixed(2) : '0.00'}</p>
+                <p className="text-2xl font-bold">₹{invoices.length > 0 ? (totalSpent / invoices.length).toFixed(2) : '0.00'}</p>
                 <p className="text-xs text-muted-foreground mt-1">Average spending per invoice</p>
               </div>
             </div>
