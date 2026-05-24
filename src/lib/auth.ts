@@ -27,14 +27,13 @@ export async function createSession(userId: string) {
 }
 
 // Verify session token
-export async function verifySession(token: string) {
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET)
+export function verifySession(token: string) {
+  const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
 
-    return decoded as {
-      userId: string
-    }
-  } catch (error) {
-    return null
+  return {
+    userId: decoded.userId,
+    email: decoded.email,
+    name: decoded.name,
+    role: decoded.role,
   }
 }
