@@ -18,21 +18,7 @@ import { AnalyticsView } from '@/components/analytics/analytics-view'
 import { PredictionsView } from '@/components/predictions/predictions-view'
 import { AIChatView } from '@/components/chat/ai-chat-view'
 import { BudgetView } from '@/components/budget/budget-view'
-
-// Placeholder for views not yet created
-function PlaceholderView({ title }: { title: string }) {
-  return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="text-center">
-        <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mx-auto mb-4 animate-pulse-glow">
-          <Sparkles className="h-8 w-8 text-purple-400" />
-        </div>
-        <h2 className="text-xl font-semibold mb-2">{title}</h2>
-        <p className="text-muted-foreground">Coming soon...</p>
-      </div>
-    </div>
-  )
-}
+import { SettingsView } from '@/components/settings/settings-view'
 
 const views: Record<ViewType, React.ComponentType> = {
   dashboard: DashboardView,
@@ -42,7 +28,7 @@ const views: Record<ViewType, React.ComponentType> = {
   predictions: PredictionsView,
   chat: AIChatView,
   budget: BudgetView,
-  settings: () => <PlaceholderView title="Settings" />,
+  settings: SettingsView,
 }
 
 export default function DashboardPage() {

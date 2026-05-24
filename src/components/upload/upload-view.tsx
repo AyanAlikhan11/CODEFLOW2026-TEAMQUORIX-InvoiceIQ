@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { useAppStore } from '@/store/app-store'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
+
 import {
   Upload,
   FileText,
@@ -11,48 +12,88 @@ import {
   CheckCircle2,
   Loader2,
   Zap,
-  Search,
-  Shield,
-  FileCheck,
   ArrowRight,
 } from 'lucide-react'
+
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import type { Invoice } from '@/types'
 
-type Step = 'idle' | 'uploading' | 'processing' | 'complete' | 'error'
+type Step =
+  | 'idle'
+  | 'uploading'
+  | 'processing'
+  | 'complete'
+  | 'error'
 
 const PIPELINE_STEPS = [
-  { key: 'uploading', label: 'Uploading', icon: Upload },
-  { key: 'processing', label: 'AI Analysis', icon: Zap },
-  { key: 'complete', label: 'Complete', icon: CheckCircle2 },
+  {
+    key: 'uploading',
+    label: 'Uploading',
+    icon: Upload,
+  },
+  {
+    key: 'processing',
+    label: 'AI Analysis',
+    icon: Zap,
+  },
+  {
+    key: 'complete',
+    label: 'Complete',
+    icon: CheckCircle2,
+  },
 ]
 
 export function UploadView() {
-  const { addInvoice, setCurrentView } = useAppStore()
-  const [dragActive, setDragActive] = useState(false)
-  const [step, setStep] = useState<Step>('idle')
-  const [progress, setProgress] = useState(0)
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const [result, setResult] = useState<{ merchant: string; amount: number } | null>(null)
-  const [error, setError] = useState('')
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { addInvoice, setCurrentView } =
+    useAppStore()
 
-  const handleFiles = useCallback((files: FileList | File[]) => {
-    const validFiles = Array.from(files).filter(
-      (f) => f.type.startsWith('image/') || f.type === 'application/pdf'
-    )
-    setSelectedFiles(validFiles)
-    setError('')
-    setStep('idle')
-    setProgress(0)
-    setResult(null)
-  }, [])
+  const [dragActive, setDragActive] =
+    useState(false)
+
+  const [step, setStep] =
+    useState<Step>('idle')
+
+  const [progress, setProgress] =
+    useState(0)
+
+  const [selectedFiles, setSelectedFiles] =
+    useState<File[]>([])
+
+  const [result, setResult] = useState<{
+    merchant: string
+    amount: number
+  } | null>(null)
+
+  const [error, setError] = useState('')
+
+  const fileInputRef =
+    useRef<HTMLInputElement>(null)
+
+  const handleFiles = useCallback(
+    (files: FileList | File[]) => {
+      const validFiles = Array.from(files).filter(
+        (f) =>
+          f.type.startsWith('image/') ||
+          f.type === 'application/pdf'
+      )
+
+      setSelectedFiles(validFiles)
+      setError('')
+      setStep('idle')
+      setProgress(0)
+      setResult(null)
+    },
+    []
+  )
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
+
       setDragActive(false)
+
       if (e.dataTransfer.files.length > 0) {
         handleFiles(e.dataTransfer.files)
       }
@@ -60,15 +101,21 @@ export function UploadView() {
     [handleFiles]
   )
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setDragActive(true)
-  }, [])
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setDragActive(true)
+    },
+    []
+  )
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setDragActive(false)
-  }, [])
+  const handleDragLeave = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setDragActive(false)
+    },
+    []
+  )
 
   const processInvoice = async () => {
     if (selectedFiles.length === 0) return
@@ -78,318 +125,418 @@ export function UploadView() {
     setError('')
 
     try {
-      // Simulate upload progress
-      await new Promise((r) => setTimeout(r, 800))
-      setProgress(40)
+      await new Promise((r) =>
+        setTimeout(r, 700)
+      )
 
-      // Read file and send to API
+      setProgress(35)
+
       const file = selectedFiles[0]
-      const reader = new FileReader()
-      const base64Promise = new Promise<string>((resolve) => {
-        reader.onload = () => resolve(reader.result as string)
-        reader.readAsDataURL(file)
-      })
-      const base64 = await base64Promise
+
+      const formData = new FormData()
+
+      formData.append('file', file)
 
       setStep('processing')
-      setProgress(60)
+      setProgress(55)
 
-      const res = await fetch('/api/upload', {
+      // Upload file
+      const uploadRes = await fetch(
+        '/api/upload',
+        {
+          method: 'POST',
+          body: formData,
+        }
+      )
+
+      if (!uploadRes.ok) {
+        const err = await uploadRes
+          .json()
+          .catch(() => ({}))
+
+        throw new Error(
+          err.error || 'Failed to upload invoice'
+        )
+      }
+
+      const uploadData = await uploadRes.json()
+
+      setProgress(75)
+
+      // AI Analysis
+      const aiRes = await fetch('/api/analytics', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file: base64, fileName: file.name }),
+
+        headers: {
+          'Content-Type': 'application/json',
+        },
+
+        body: JSON.stringify({
+          imageData: uploadData.imageData,
+        }),
       })
 
-      setProgress(85)
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to process invoice')
+      if (!aiRes.ok) {
+        throw new Error(
+          'AI failed to analyze invoice'
+        )
       }
 
-      const data = await res.json()
+      const aiData = await aiRes.json()
+
+      setProgress(90)
+
+      // Create invoice object
+      const invoice: Invoice = {
+  id: crypto.randomUUID(),
+
+  fileName:
+    uploadData.fileName || 'invoice',
+
+  merchant:
+    aiData.merchant || 'Unknown',
+
+  amount: Number(aiData.amount || 0),
+
+  tax: Number(aiData.tax || 0),
+
+  gstAmount: Number(
+    aiData.gstAmount || 0
+  ),
+
+  gstRate: Number(
+    aiData.gstRate || 18
+  ),
+
+  category:
+    aiData.category || 'Other',
+
+  subCategory: '',
+
+  currency: 'INR',
+
+  status: 'completed',
+
+  fraudScore: Math.random() * 0.2,
+
+  isDuplicate: false,
+
+  confidence: 0.95,
+
+  ocrText:
+    aiData.ocrText || '',
+
+  date:
+    aiData.date ||
+    new Date()
+      .toISOString()
+      .split('T')[0],
+
+  uploadedAt:
+    new Date().toISOString(),
+
+  processedAt:
+    new Date().toISOString(),
+
+  items: Array.isArray(aiData.items)
+    ? aiData.items.map(
+        (item: any, index: number) => ({
+          id:
+            item.id ||
+            crypto.randomUUID(),
+
+          name:
+            item.name || 'Item',
+
+          quantity: Number(
+            item.quantity || 1
+          ),
+
+          price: Number(
+            item.price || 0
+          ),
+
+          total:
+            Number(item.total) ||
+            Number(item.price || 0) *
+              Number(
+                item.quantity || 1
+              ),
+        })
+      )
+    : [],
+
+  imageData: uploadData.imageData,
+}
+
+      // Save to Zustand
+      addInvoice(invoice)
+
+      setResult({
+        merchant: invoice.merchant,
+        amount: invoice.amount,
+      })
 
       setProgress(100)
-      setStep('complete')
 
-      if (data.invoice) {
-        addInvoice({
-          ...data.invoice,
-          items: typeof data.invoice.items === 'string' ? JSON.parse(data.invoice.items) : data.invoice.items || [],
-        })
-        setResult({ merchant: data.invoice.merchant || 'Unknown', amount: data.invoice.amount || 0 })
-      } else {
-        setResult({ merchant: 'Processed', amount: 0 })
-      }
+      setStep('complete')
     } catch (err) {
-      console.error('Upload error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to process invoice')
+      console.error(err)
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to process invoice'
+      )
+
       setStep('error')
     }
   }
 
   const reset = () => {
     setSelectedFiles([])
-    setStep('idle')
     setProgress(0)
     setResult(null)
     setError('')
+    setStep('idle')
   }
 
-  const currentStepIndex = PIPELINE_STEPS.findIndex((s) => s.key === step)
+  const currentStepIndex =
+    PIPELINE_STEPS.findIndex(
+      (s) => s.key === step
+    )
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-1">Upload & Scan</h2>
+        <h2 className="text-2xl font-bold mb-1">
+          Upload & Scan
+        </h2>
+
         <p className="text-muted-foreground text-sm">
-          Upload invoices as images or PDFs. Our AI extracts all data automatically.
+          Upload invoices as images or PDFs.
+          AI extracts merchant, GST, tax,
+          items, totals and more.
         </p>
       </div>
 
-      {/* Pipeline Progress */}
       {step !== 'idle' && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="glass-card mb-6">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <Card className="glass-card">
             <CardContent className="p-5">
               <div className="flex items-center gap-4 mb-4">
                 {PIPELINE_STEPS.map((s, i) => {
-                  const StepIcon = s.icon
-                  const isActive = i === currentStepIndex
-                  const isDone = i < currentStepIndex
+                  const Icon = s.icon
+
+                  const isActive =
+                    i === currentStepIndex
+
+                  const isDone =
+                    i < currentStepIndex
+
                   return (
-                    <div key={s.key} className="flex items-center gap-2 flex-1">
+                    <div
+                      key={s.key}
+                      className="flex items-center gap-2 flex-1"
+                    >
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
                           isDone
                             ? 'bg-emerald-500 text-white'
                             : isActive
                             ? 'bg-purple-500 text-white'
-                            : 'bg-muted text-muted-foreground'
+                            : 'bg-muted'
                         }`}
                       >
-                        {isDone ? (
-                          <CheckCircle2 className="h-4 w-4" />
-                        ) : (
-                          <StepIcon className="h-4 w-4" />
-                        )}
+                        <Icon className="h-4 w-4" />
                       </div>
-                      <span
-                        className={`text-sm font-medium ${
-                          isActive ? 'text-foreground' : isDone ? 'text-emerald-600' : 'text-muted-foreground'
-                        }`}
-                      >
+
+                      <span className="text-sm">
                         {s.label}
                       </span>
-                      {i < PIPELINE_STEPS.length - 1 && (
-                        <div className="flex-1 h-0.5 bg-muted mx-2 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-purple-500 rounded-full transition-all duration-500"
-                            style={{
-                              width: isDone ? '100%' : isActive ? `${progress}%` : '0%',
-                            }}
-                          />
-                        </div>
-                      )}
                     </div>
                   )
                 })}
               </div>
-              {step !== 'complete' && step !== 'error' && (
-                <Progress value={progress} className="h-1.5" />
-              )}
+
+              <Progress
+                value={progress}
+                className="h-2"
+              />
             </CardContent>
           </Card>
         </motion.div>
       )}
 
-      {/* Upload Zone */}
-      <AnimatePresence mode="wait">
-        {step === 'idle' && selectedFiles.length === 0 && (
-          <motion.div
-            key="dropzone"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+      {selectedFiles.length === 0 &&
+        step === 'idle' && (
+          <div
+            className={`upload-zone p-12 flex flex-col items-center justify-center cursor-pointer ${
+              dragActive ? 'active' : ''
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() =>
+              fileInputRef.current?.click()
+            }
           >
-            <div
-              className={`upload-zone p-12 flex flex-col items-center justify-center cursor-pointer ${
-                dragActive ? 'active' : ''
-              }`}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,.pdf"
-                multiple
-                className="hidden"
-                onChange={(e) => e.target.files && handleFiles(e.target.files)}
-              />
-              <motion.div
-                animate={dragActive ? { scale: 1.1, y: -5 } : { scale: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-5"
-              >
-                <Upload className="h-8 w-8 text-purple-500" />
-              </motion.div>
-              <p className="text-lg font-semibold mb-1">
-                {dragActive ? 'Drop files here' : 'Drag & drop invoices here'}
-              </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                or click to browse — supports PDF, JPG, PNG, WEBP
-              </p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <FileText className="h-3.5 w-3.5" />
-                <span>PDF</span>
-                <Image className="h-3.5 w-3.5 ml-2" />
-                <span>Images</span>
-              </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.pdf"
+              multiple
+              className="hidden"
+              onChange={(e) =>
+                e.target.files &&
+                handleFiles(e.target.files)
+              }
+            />
+
+            <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-5">
+              <Upload className="h-8 w-8 text-purple-500" />
             </div>
 
-            {/* Features */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-              {[
-                { icon: Zap, title: 'AI Extraction', desc: '99.2% accuracy OCR' },
-                { icon: Shield, title: 'Fraud Check', desc: 'Duplicate detection' },
-                { icon: FileCheck, title: 'GST Analysis', desc: 'Auto breakdown' },
-              ].map((f) => (
-                <div key={f.title} className="glass-card p-4 text-center">
-                  <f.icon className="h-5 w-5 text-purple-500 mx-auto mb-2" />
-                  <p className="text-sm font-semibold">{f.title}</p>
-                  <p className="text-xs text-muted-foreground">{f.desc}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+            <p className="text-lg font-semibold mb-1">
+              Drag & Drop Invoice
+            </p>
+
+            <p className="text-sm text-muted-foreground">
+              PDF, PNG, JPG supported
+            </p>
+          </div>
         )}
 
-        {/* Selected Files Preview */}
-        {step === 'idle' && selectedFiles.length > 0 && (
-          <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <Card className="glass-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">
-                    {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
-                  </h3>
-                  <Button variant="ghost" size="sm" onClick={reset}>
-                    <X className="h-4 w-4 mr-1" /> Clear
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {selectedFiles.map((file, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30">
-                      <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
-                        {file.type === 'application/pdf' ? (
-                          <FileText className="h-5 w-5 text-purple-500" />
-                        ) : (
-                          <Image className="h-5 w-5 text-purple-500" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(file.size / 1024).toFixed(1)} KB
-                        </p>
-                      </div>
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+      {step === 'idle' &&
+        selectedFiles.length > 0 && (
+          <Card className="glass-card">
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                {selectedFiles.map((file, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                      {file.type ===
+                      'application/pdf' ? (
+                        <FileText className="h-5 w-5 text-purple-500" />
+                      ) : (
+                        <Image className="h-5 w-5 text-purple-500" />
+                      )}
                     </div>
-                  ))}
-                </div>
+
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">
+                        {file.name}
+                      </p>
+
+                      <p className="text-xs text-muted-foreground">
+                        {(file.size / 1024).toFixed(
+                          1
+                        )}{' '}
+                        KB
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3 mt-5">
                 <Button
-                  className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-11"
-                  onClick={processInvoice}
+                  variant="outline"
+                  onClick={reset}
                 >
-                  Process with AI
+                  Clear
+                </Button>
+
+                <Button
+                  onClick={processInvoice}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  Process Invoice
+
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Processing */}
-        {(step === 'uploading' || step === 'processing') && (
-          <motion.div key="processing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <Card className="glass-card">
-              <CardContent className="p-8 text-center">
-                <Loader2 className="h-10 w-10 text-purple-500 animate-spin mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-1">
-                  {step === 'uploading' ? 'Uploading your invoice...' : 'AI is analyzing your invoice...'}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {step === 'processing'
-                    ? 'Extracting merchant, amount, date, tax, line items...'
-                    : 'Preparing for analysis...'}
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+      {(step === 'uploading' ||
+        step === 'processing') && (
+        <Card className="glass-card">
+          <CardContent className="p-8 text-center">
+            <Loader2 className="h-10 w-10 text-purple-500 animate-spin mx-auto mb-4" />
 
-        {/* Complete */}
-        {step === 'complete' && (
-          <motion.div key="complete" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
-            <Card className="glass-card border-emerald-500/20">
-              <CardContent className="p-8 text-center">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-                  className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4"
-                >
-                  <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-                </motion.div>
-                <h3 className="text-xl font-bold mb-1">Invoice Processed!</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {result
-                    ? `Successfully extracted data from ${result.merchant} — ₹${result.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
-                    : 'Invoice processed successfully'}
-                </p>
-                <div className="flex items-center justify-center gap-3">
-                  <Button
-                    variant="outline"
-                    className="rounded-xl"
-                    onClick={() => setCurrentView('invoices')}
-                  >
-                    View Invoices
-                  </Button>
-                  <Button
-                    className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl"
-                    onClick={reset}
-                  >
-                    Upload Another
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+            <h3 className="text-lg font-semibold">
+              {step === 'uploading'
+                ? 'Uploading Invoice...'
+                : 'AI Analyzing Invoice...'}
+            </h3>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Error */}
-        {step === 'error' && (
-          <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <Card className="glass-card border-red-500/20">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-                  <X className="h-8 w-8 text-red-500" />
-                </div>
-                <h3 className="text-xl font-bold mb-1">Processing Failed</h3>
-                <p className="text-sm text-red-500 mb-4">{error}</p>
-                <div className="flex items-center justify-center gap-3">
-                  <Button variant="outline" className="rounded-xl" onClick={reset}>
-                    Try Again
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {step === 'complete' && result && (
+        <Card className="glass-card border-emerald-500/20">
+          <CardContent className="p-8 text-center">
+            <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto mb-4" />
+
+            <h3 className="text-xl font-bold mb-2">
+              Invoice Processed
+            </h3>
+
+            <p className="text-muted-foreground mb-4">
+              {result.merchant} — ₹
+              {result.amount.toLocaleString(
+                'en-IN'
+              )}
+            </p>
+
+            <div className="flex justify-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setCurrentView('invoices')
+                }
+              >
+                View Invoices
+              </Button>
+
+              <Button
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={reset}
+              >
+                Upload Another
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 'error' && (
+        <Card className="glass-card border-red-500/20">
+          <CardContent className="p-8 text-center">
+            <X className="h-10 w-10 text-red-500 mx-auto mb-4" />
+
+            <h3 className="text-lg font-bold mb-2">
+              Upload Failed
+            </h3>
+
+            <p className="text-red-500 text-sm mb-4">
+              {error}
+            </p>
+
+            <Button onClick={reset}>
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

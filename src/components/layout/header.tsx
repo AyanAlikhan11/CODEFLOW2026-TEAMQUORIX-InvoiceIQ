@@ -2,19 +2,12 @@
 
 import { useState } from 'react'
 import { useAppStore } from '@/store/app-store'
-<<<<<<< HEAD
-import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, Search, MessageCircle, X, Receipt } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-=======
 import { useAuth } from '@/lib/auth-context'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, Search, MessageCircle, X, Receipt, LogOut, User } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
->>>>>>> b94359f (landing page created,signup signin created, firebase for authentication)
 
 const viewInfo: Record<string, { title: string; description: string }> = {
   dashboard: {
@@ -52,18 +45,8 @@ const viewInfo: Record<string, { title: string; description: string }> = {
 }
 
 export function Header() {
-<<<<<<< HEAD
-  const {
-    currentView,
-    invoices,
-    fraudAlerts,
-    setCurrentView,
-    setIsChatOpen,
-  } = useAppStore()
-=======
   const { currentView, invoices, fraudAlerts, setCurrentView, setIsChatOpen } = useAppStore()
   const { user, logout } = useAuth()
->>>>>>> b94359f (landing page created,signup signin created, firebase for authentication)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
 
@@ -178,11 +161,7 @@ export function Header() {
                               </p>
                             </div>
                             <span className="text-sm font-semibold shrink-0">
-<<<<<<< HEAD
-                              ${inv.amount.toFixed(2)}
-=======
-                              ₹${inv.amount.toFixed(2)}
->>>>>>> b94359f (landing page created,signup signin created, firebase for authentication)
+                              ₹{inv.amount.toFixed(2)}
                             </span>
                           </motion.div>
                         ))
@@ -193,11 +172,7 @@ export function Header() {
                         <p className="text-xs text-muted-foreground text-center">
                           {invoices.length} invoice
                           {invoices.length !== 1 ? 's' : ''} processed
-<<<<<<< HEAD
-                          &middot; Total: ${totalSpent.toFixed(2)}
-=======
                           &middot; Total: ₹${totalSpent.toFixed(2)}
->>>>>>> b94359f (landing page created,signup signin created, firebase for authentication)
                         </p>
                       </div>
                     )}
@@ -218,8 +193,6 @@ export function Header() {
             >
               <MessageCircle className="h-5 w-5 text-muted-foreground" />
             </motion.button>
-<<<<<<< HEAD
-=======
 
             {/* User Profile Dropdown */}
             <div className="relative">
@@ -267,7 +240,6 @@ export function Header() {
                 )}
               </AnimatePresence>
             </div>
->>>>>>> b94359f (landing page created,signup signin created, firebase for authentication)
           </div>
         </div>
       </motion.header>

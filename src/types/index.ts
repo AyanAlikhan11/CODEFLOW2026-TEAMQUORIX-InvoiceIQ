@@ -7,26 +7,31 @@ export interface InvoiceItem {
   total: number
 }
 
+export type InvoiceStatus = 'processing' | 'completed' | 'flagged' | 'duplicate';
+
 export interface Invoice {
-  id: string
-  fileName: string
-  merchant: string
-  amount: number
-  date: string | null
-  tax: number
-  gstAmount: number
-  gstRate: number
-  category: string
-  subCategory: string
-  items: InvoiceItem[]
-  currency: string
-  status: 'processing' | 'completed' | 'flagged' | 'duplicate'
-  fraudScore: number
-  isDuplicate: boolean
-  confidence: number
-  ocrText: string
-  uploadedAt: string
-  processedAt: string | null
+  id: string;
+  fileName: string;
+  merchant: string;
+  amount: number;
+  date: string | null;
+  tax: number;
+  gstAmount: number;
+  gstRate: number;
+  category: string;
+  subCategory: string;
+  items: InvoiceItem[];
+  currency: string;
+  status: InvoiceStatus;
+  fraudScore: number;
+  isDuplicate: boolean;
+  confidence: number;
+  ocrText: string;
+
+  imageData?: string; // ADD THIS
+
+  uploadedAt: string;
+  processedAt: string | null;
 }
 
 // Category types

@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Bot,
   Wallet,
+  Settings,
   ChevronLeft,
   ChevronRight,
   Receipt,
@@ -34,6 +35,7 @@ const navItems: { id: ViewType; label: string; icon: React.ElementType }[] = [
   { id: 'predictions', label: 'Predictions', icon: TrendingUp },
   { id: 'chat', label: 'AI Assistant', icon: Bot },
   { id: 'budget', label: 'Budget', icon: Wallet },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
 export function Sidebar() {
