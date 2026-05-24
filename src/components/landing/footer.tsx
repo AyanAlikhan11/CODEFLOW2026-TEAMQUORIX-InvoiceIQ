@@ -59,10 +59,10 @@ export function LandingFooter() {
             <a href="#" className="text-sm hover:text-white transition-colors">
               Twitter
             </a>
-            <a href="#" className="text-sm hover:text-white transition-colors">
+            <a href="www.linkedin.com/in/ayan-ali-khan1" className="text-sm hover:text-white transition-colors">
               LinkedIn
             </a>
-            <a href="#" className="text-sm hover:text-white transition-colors">
+            <a href="https://github.com/AyanAlikhan11" className="text-sm hover:text-white transition-colors">
               GitHub
             </a>
           </div>
