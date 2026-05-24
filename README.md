@@ -188,7 +188,7 @@ AI predicts:
 | Node.js | Backend Runtime |
 | Express.js | API Handling |
 | Multer | File Uploads |
-| JWT | Authentication |
+|Firebase Authentication | Authentication |
 
 ---
 
@@ -210,7 +210,7 @@ AI predicts:
 
 | Technology | Purpose |
 |---|---|
-| PostgreSQL | Main Database |
+|Firestore | Main Database |
 | Redis | Caching & Queues |
 
 ---
@@ -414,25 +414,25 @@ GEMINI_API_KEY=your_gemini_key
 
 # 🖥️ Landing Page
 
-> Add screenshot here
+> 
 
 ---
 
 # 📊 Dashboard
 
-> Add screenshot here
+>
 
 ---
 
 # 📄 Upload Center
 
-> Add screenshot here
+> 
 
 ---
 
 # 🧠 AI Insights
 
-> Add screenshot here
+> 
 
 ---
 
@@ -471,7 +471,9 @@ Built with ❤️ for **CodeFlow 2026 Hackathon**
 ## Team Members
 
 - Ayan Ali Khan
-- Add Team Members Here
+- Ayush Kumar
+- Tushar Kumar Sah
+- MD. Hammad Shahaab
 
 ---
 
@@ -526,7 +528,7 @@ If you like this project:
 
 ### Ayan Ali Khan
 
-📧 Email: your-email@example.com
+📧 Email: scoutayan853@gmail.com
 
 🔗 GitHub:
 https://github.com/AyanAlikhan11
