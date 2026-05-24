@@ -7,20 +7,19 @@ export default function HistoryLogoutGuard() {
   const router = useRouter()
 
   useEffect(() => {
-    // Push a fake history entry so we can detect back navigation
+    // Create history trap
     window.history.pushState({ page: 'guard' }, '', window.location.href)
 
     const handlePopState = async () => {
       try {
-        // Call logout API
         await fetch('/api/auth/logout', {
           method: 'POST',
         })
 
-        // Redirect to login
         router.replace('/login')
+        router.refresh()
       } catch (err) {
-        console.error('Logout on history navigation failed:', err)
+        console.error('Logout failed on navigation:', err)
       }
     }
 
