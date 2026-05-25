@@ -137,7 +137,7 @@ export function CategoryBreakdown() {
                   %
                 </span>
                 <span className="font-medium">
-                  ₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  ₹{item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

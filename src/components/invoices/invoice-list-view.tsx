@@ -294,10 +294,10 @@ function InvoiceCard({
                                     {item.quantity}
                                   </TableCell>
                                   <TableCell className="text-xs text-center py-2">
-                                    ₹${item.price.toFixed(2)}
+                                    ₹{item.price.toFixed(2)}
                                   </TableCell>
                                   <TableCell className="text-xs text-right py-2 font-medium">
-                                    ₹${(item.price * item.quantity).toFixed(2)}
+                                    ₹{(item.price * item.quantity).toFixed(2)}
                                   </TableCell>
                                 </TableRow>
                               ))}

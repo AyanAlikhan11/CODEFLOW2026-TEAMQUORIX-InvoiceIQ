@@ -113,7 +113,7 @@ export function GSTAnalytics() {
           <div className="p-3 rounded-xl bg-secondary/30 text-center">
             <p className="text-xs text-muted-foreground">Total GST</p>
             <p className="text-lg font-bold text-[#06b6d4]">
-              ₹${gst.totalGST.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              ₹{gst.totalGST.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </p>
           </div>
           <div className="p-3 rounded-xl bg-secondary/30 text-center">
@@ -126,15 +126,15 @@ export function GSTAnalytics() {
         <div className="grid grid-cols-3 gap-2">
           <div className="text-center p-2 rounded-lg bg-[#8b5cf6]/10">
             <p className="text-[10px] text-muted-foreground">CGST</p>
-            <p className="text-sm font-semibold">₹${gst.cgst.toFixed(2)}</p>
+            <p className="text-sm font-semibold">₹{gst.cgst.toFixed(2)}</p>
           </div>
           <div className="text-center p-2 rounded-lg bg-[#06b6d4]/10">
             <p className="text-[10px] text-muted-foreground">SGST</p>
-            <p className="text-sm font-semibold">₹${gst.sgst.toFixed(2)}</p>
+            <p className="text-sm font-semibold">₹{gst.sgst.toFixed(2)}</p>
           </div>
           <div className="text-center p-2 rounded-lg bg-[#f97316]/10">
             <p className="text-[10px] text-muted-foreground">IGST</p>
-            <p className="text-sm font-semibold">₹${gst.igst.toFixed(2)}</p>
+            <p className="text-sm font-semibold">₹{gst.igst.toFixed(2)}</p>
           </div>
         </div>
 
@@ -200,7 +200,7 @@ export function GSTAnalytics() {
                     {item.name}
                   </span>
                   <span className="text-xs font-medium">
-                    ₹${item.value.toFixed(2)}
+                    ₹{item.value.toFixed(2)}
                   </span>
                 </div>
               ))}
